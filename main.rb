@@ -1,108 +1,105 @@
-# # mixing is done on an indented plastic plate called well 
+class Laboratory
+  class WrongInputError < StandardError; end
 
+  attr_reader :plate_size, :samples, :reagents, :replica_numbers
 
-
-# def generator(plate_size, experiments, reagents, replica_numbers)
-#     # experiment & reagent array & replicanum size is always the same
-#     result = []
-#     for i in 0...experiments.length 
-#         #samples for one experiment
-#         samples = experiments[i]
-#         replica_numbers[i].times do 
-#             samples.each do |sample|
-#                 reagents[i].each do |reagent|
-#                     result.push([sample, reagent])
-#                 end
-#             end
-#         end
-#     end
-#     result.sort_by {|mixture| mixture.last}
-# end
-
-# # plate_size = 96
-# # sample_names = [['Sam 1', 'Sam 2', 'Sam 3'], ['Sam 1', 'Sam 3', 'Sam 4']]
-# # reagent_names = [['Reag X', 'Reag Y'], ['Reag Y', 'Reag Z']]
-# # replica_numbers = [1, 3]
-
-
-# plate_size = 96
-# sample_names = [['S1', 'S2', 'S3'], ['S1', 'S2', 'S3']]
-# reagent_names = [['P'], ['G']]
-# replica_numbers = [3, 2]
-
-# curr_res = generator(plate_size, sample_names, reagent_names, replica_numbers)
-# # p curr_res
-# reagents = []
-
-# curr_res.each do |pair|
-#   reagents.push(pair[1])
-# end
-# reagents = reagents.uniq
-
-
-
-# array = Array.new(8) {Array.new(12)}
-# array_height = array.length
-# array_width = array[0].length
-
-
-# array_height.times do |i|
-#   array_width.times do |j|
-#   end
-# end
-
-
-# p curr_res.length
-
-# #iterating over the plate 
-# curr_res.each do |each_reagent_one|
-#   p each_reagent_one
-  
-#   array_height.times do |i|
-#     array_width.times do |j|
-      
-#     end
-#   end
-# end
-
- 
-
-
-
-# array.each do |row|
-#   p row
-# end
-
-
-
- 
-
-
-array = [
-  [nil, nil, nil],
-  [nil, nil, nil],
-  [nil, nil, nil]
-]
-
-
-insertions = [1, 2, 3, 4, 5, 6, 7]
-
-
-height = 0
-for i in 0...insertions.length 
-
-  if i < array[height].length 
-    array[height][i] = insertions[i]
-  else
-    height += 1 if height < array.length - 1
-    array[height][i] = insertions[i]
+  def initialize(plate_size, samples, reagents, replica_numbers)
+    @plate_size = plate_size
+    @samples = samples
+    @reagents = reagents
+    @replica_numbers = replica_numbers
   end
-  # p array[height]
-  p "--------------------"
+  
+  def call
+    input_validation
+    plates_generator
+  rescue WrongInputError => e
+    warn e
+  end
+
+  private
+
+    def plates_generator
+      mixtures = mixtures_generator()
+      y_axis = 0
+      x_axis = 0
+      plate_array = []
+      max_plate_height, max_plate_width = plate_dimensions_generator()
+
+      plate = empty_plate_generator(max_plate_height, max_plate_width)
+
+      mixtures.each do |mixture|
+        plate[y_axis][x_axis] = mixture
+
+        if y_axis == max_plate_height - 1 && x_axis == max_plate_width - 1 && mixture != mixtures.last
+          y_axis = 0
+          x_axis = 0
+          plate_array.append(plate)
+          plate = empty_plate_generator(max_plate_height, max_plate_width)
+          next
+        end
+
+        if x_axis == max_plate_width - 1
+          y_axis += 1
+          x_axis = 0
+        else
+          x_axis += 1
+        end
+      end
+
+      plate_array.append(plate)
+      plate_array
+    end
+
+    def mixtures_generator
+      result = []
+      (0...samples.length).each do |i|
+        replica_numbers[i].times do
+          samples[i].each do |sample|
+            reagents[i].each do |reagent|
+              result.push([sample, reagent])
+            end
+          end
+        end
+      end
+      mixtures_sorter(result)
+    end
+
+    def mixtures_sorter(mixtures)
+      mixtures.sort_by { |mixture| [mixture.last, mixture.first] }
+    end
+
+    def plate_dimensions_generator
+      plate_size == 96 ? [8, 12] : [16, 24]
+    end
+
+    def empty_plate_generator(max_plate_height, max_plate_width)
+      Array.new(max_plate_height) { Array.new(max_plate_width) }
+    end
+
+    def input_validation
+      unless plate_size == 96 || plate_size == 384
+        raise WrongInputError, 'Plate size cant be that number, choose either 96 or 384!'
+      end
+
+      unless samples.length == reagents.length && reagents.length == replica_numbers.length
+        raise WrongInputError, 'Please enter samples, reagents and replica number arrays of same length!'
+      end
+    end
 end
 
+plate_size = 96
+sample_names = [['S1', 'S2', 'S3'], ['S1', 'S2', 'S3']]
+reagent_names = [['P'], ['G']]
+replica_numbers = [3, 2]
 
+laboratory = Laboratory.new(plate_size, sample_names, reagent_names, replica_numbers)
 
-array.each do |i|
-  p i 
+result = laboratory.call
+
+result.each do |plate|
+  plate.each do |row|
+    p row
+  end
+  p '---------------------'
 end
